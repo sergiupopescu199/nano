@@ -73,7 +73,7 @@ async fn main() -> Result<()> {
 
 ### Development on VsCode
 
-This repository uses `.devcontainer` inside you can spin a couchdb instance suing `docker-compose`  so teh re is no need to create a separate docker-compose file
+This repository uses `.devcontainer` inside you can spin a couchdb instance suing `docker-compose`  so there is no need to create a separate docker-compose file
 
 ```bash
 docker-compose -f .devcontainer/couchdb.yaml up -d
