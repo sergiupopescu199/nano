@@ -1,0 +1,19 @@
+version: "3"
+# docker-compose -f couch.yaml up -d
+services:
+  # a single node, to create a cluster it needs a different configuration
+  nano_couchdb:
+    container_name: nano_couchdb
+    image: couchdb
+    # Populate the COUCHDB_USER and COUCHDB_PASSWORD to set an admin user and password
+    # for CouchDB.  This will prevent CouchDB from operating in an "Admin Party" mode.
+    environment:
+      - COUCHDB_USER=dev
+      - COUCHDB_PASSWORD=dev
+    # Comment/Uncomment the port mapping if you want to hide/expose the CouchDB service,
+    # for example map it to utilize Fauxton User Interface in dev environments.
+    ports:
+      - "5984:5984"
+    volumes:
+      - ./volumes/couchdb/data:/opt/couchdb/data
+      - ./volumes/couchdb/etc:/opt/couchdb/etc/local.d

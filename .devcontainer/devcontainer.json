@@ -1,0 +1,23 @@
+{
+	"name": "nano_dev",
+	"dockerComposeFile": [
+		"docker-compose.yaml",
+		"couchdb.yaml"
+	],
+	"service": "nano_dev",
+	"workspaceFolder": "/nano",
+	"shutdownAction": "stopCompose",
+	"forwardPorts": [
+		3001
+	],
+	"extensions": [
+		"matklad.rust-analyzer",
+		"eamodio.gitlens",
+		"bungcip.better-toml",
+		"panicbit.cargo",
+		"serayuzgur.crates",
+		"tamasfe.even-better-toml",
+		"natqe.reload",
+		"usernamehw.errorlens"
+	]
+}

@@ -1,0 +1,18 @@
+version: "3.9"
+services:
+  nano_dev:
+    container_name: "nano_dev"
+    build:
+      context: ./
+      dockerfile: Dockerfile
+    working_dir: /nano
+    # used for incremental builds, saves a lot of time
+    environment:
+      - CARGO_HOME=/nano/.cargo
+      - CARGO_TARGET_DIR=/nano/target
+    # volumes needed for compilation on the host
+    volumes:
+      - ../:/nano
+      - ../target:/nano/target
+      - ../.cargo:/nano/.cargo
+    command:  /bin/sh -c "while sleep 5; do :; done"
