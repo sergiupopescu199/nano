@@ -64,7 +64,7 @@ async fn main() -> Result<()> {
     // get the id and rev from previously created doc, in order to delete a doc we must provide the id and rev
     let id_doc_to_destory = doc_created_res.id;
     let rev_doc_to_destory = doc_created_res.rev;
-	// delete the previously created document
+    // delete the previously created document
     let doc_deleted_res = bob.destroy(&id_doc_to_destory, &rev_doc_to_destory).await?;
     println!("{:?}", doc_deleted_res);
     Ok(())
