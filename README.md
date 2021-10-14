@@ -71,3 +71,15 @@ async fn main() -> Result<()> {
 }
 ```
 
+### Development on VsCode
+
+This repository uses `.devcontainer` inside you can spin a couchdb instance suing `docker-compose`  so teh re is no need to create a separate docker-compose file
+
+```bash
+docker-compose -f .devcontainer/couchdb.yaml up -d
+```
+
+in this way you’ll be able to test how nano is interacting with the local couchdb instance by using `http://dev:dev@localhost5984`.
+
+But the most powerful thing about **devcontainer** is the ability to develop inside a container just install this extension `ms-vscode-remote.remote-containers` and then use `Ctrl+P` and type `Remote-Containers: Open Folder in Container` and it should automatically create the rust environment
+
