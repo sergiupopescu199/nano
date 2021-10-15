@@ -34,18 +34,12 @@ pub async fn create(db: &Nano, db_name: &str) -> Result<DBActionSuccess, NanoErr
     // create url which couchdb will be contacted
     let url = &*format!("{}/{}", db.url, db_name);
     // make the request to couchdb
-    let response = match db.client.put(url).send().await {
-        Ok(response) => response,
-        Err(err) => return Err(NanoError::InvalidRequest(err)),
-    };
+    let response = db.client.put(url).send().await?;
     // check the status code if it's in range from 200-299
     let status = response.status().is_success();
     let status_code = response.status().as_u16();
     // parse the response body
-    let body = match response.json::<Value>().await {
-        Ok(body) => body,
-        Err(err) => return Err(err.into()),
-    };
+    let body = response.json::<Value>().await?;
 
     match status {
         true => {

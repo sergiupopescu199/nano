@@ -12,18 +12,12 @@ pub async fn list(db: &Nano) -> Result<CouchDBListDBs, NanoError> {
     // create url which couchdb will be contacted
     let url = format!("{}/_all_dbs", db.url);
     // make the request to couchdb
-    let response = match db.client.get(&url).send().await {
-        Ok(response) => response,
-        Err(err) => return Err(NanoError::InvalidRequest(err)),
-    };
+    let response = db.client.get(&url).send().await?;
     // check the status code if it's in range from 200-299
     let status = response.status().is_success();
     let status_code = response.status().as_u16();
     // parse the response body
-    let body = match response.json::<Value>().await {
-        Ok(body) => body,
-        Err(err) => return Err(err.into()),
-    };
+    let body = response.json::<Value>().await?;
 
     match status {
         true => {

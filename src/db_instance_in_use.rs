@@ -33,18 +33,12 @@ pub struct DBFindList {
 impl DBInstanceInUse {
     pub async fn info(&self) -> Result<DBInfo, NanoError> {
         let url = &*format!("{}/{}", self.url, self.db_name);
-        let response = match self.client.get(url).send().await {
-            Ok(response) => response,
-            Err(err) => return Err(NanoError::InvalidUrlOrPort(err)),
-        };
+        let response = self.client.get(url).send().await?;
         // check the status code if it's in range from 200-299
         let status = response.status().is_success();
         let status_code = response.status().as_u16();
         // parse the response body
-        let body = match response.json::<Value>().await {
-            Ok(body) => body,
-            Err(err) => return Err(err.into()),
-        };
+        let body = response.json::<Value>().await?;
 
         match status {
             true => {
@@ -82,18 +76,12 @@ impl DBInstanceInUse {
             )
         };
 
-        let response = match self.client.put(&formated_url).json(&doc_body).send().await {
-            Ok(response) => response,
-            Err(err) => return Err(NanoError::InvalidUrlOrPort(err)),
-        };
+        let response = self.client.put(&formated_url).json(&doc_body).send().await?;
         // check the status code if it's in range from 200-299
         let status = response.status().is_success();
         let status_code = response.status().as_u16();
         // parse the response body
-        let body = match response.json::<Value>().await {
-            Ok(body) => body,
-            Err(err) => return Err(err.into()),
-        };
+        let body =response.json::<Value>().await?;
 
         match status {
             true => {
@@ -109,18 +97,12 @@ impl DBInstanceInUse {
     pub async fn destroy(&self, id: &str, rev: &str) -> Result<DBDocSuccess, NanoError> {
         let formated_url = format!("{}/{}/{}?rev={}", self.url, self.db_name, id, rev);
 
-        let response = match self.client.delete(&formated_url).send().await {
-            Ok(response) => response,
-            Err(err) => return Err(NanoError::InvalidUrlOrPort(err)),
-        };
+        let response = self.client.delete(&formated_url).send().await?;
         // check the status code if it's in range from 200-299
         let status = response.status().is_success();
         let status_code = response.status().as_u16();
         // parse the response body
-        let body = match response.json::<Value>().await {
-            Ok(body) => body,
-            Err(err) => return Err(err.into()),
-        };
+        let body = response.json::<Value>().await?;
 
         match status {
             true => {
@@ -143,18 +125,12 @@ impl DBInstanceInUse {
             format!("{}/{}/{}", self.url, self.db_name, id)
         };
 
-        let response = match self.client.get(&formated_url).send().await {
-            Ok(response) => response,
-            Err(err) => return Err(NanoError::InvalidUrlOrPort(err)),
-        };
+        let response = self.client.get(&formated_url).send().await?;
         // check the status code if it's in range from 200-299
         let status = response.status().is_success();
         let status_code = response.status().as_u16();
         // parse the response body
-        let body = match response.json::<Value>().await {
-            Ok(body) => body,
-            Err(err) => return Err(err.into()),
-        };
+        let body = response.json::<Value>().await?;
 
         match status {
             true => {
@@ -177,18 +153,12 @@ impl DBInstanceInUse {
             format!("{}/{}/_all_docs", self.url, self.db_name)
         };
 
-        let response = match self.client.get(&formated_url).send().await {
-            Ok(response) => response,
-            Err(err) => return Err(NanoError::InvalidUrlOrPort(err)),
-        };
+        let response = self.client.get(&formated_url).send().await?;
         // check the status code if it's in range from 200-299
         let status = response.status().is_success();
         let status_code = response.status().as_u16();
         // parse the response body
-        let body = match response.json::<Value>().await {
-            Ok(body) => body,
-            Err(err) => return Err(err.into()),
-        };
+        let body = response.json::<Value>().await?;
 
         match status {
             true => {
@@ -204,17 +174,11 @@ impl DBInstanceInUse {
     pub async fn bulk(&self, docs: &Value) -> Result<Value, NanoError> {
         let formated_url = format!("{}/{}/_bulk_docs", self.url, self.db_name);
 
-        let response = match self.client.post(&formated_url).json(docs).send().await {
-            Ok(response) => response,
-            Err(err) => return Err(NanoError::InvalidUrlOrPort(err)),
-        };
+        let response = self.client.post(&formated_url).json(docs).send().await?;
         // check the status code if it's in range from 200-299
         let status = response.status().is_success();
         // parse the response body
-        let body = match response.json::<Value>().await {
-            Ok(body) => body,
-            Err(err) => return Err(err.into()),
-        };
+        let body = response.json::<Value>().await?;
         match status {
             true => Ok(body),
             false => Err(NanoError::GenericCouchdbError(body)),
@@ -223,23 +187,16 @@ impl DBInstanceInUse {
     pub async fn find(&self, mango_query_obj: &Value) -> Result<DBFindList, NanoError> {
         let formated_url = format!("{}/{}/_find", self.url, self.db_name);
 
-        let response = match self
-            .client
-            .post(&formated_url)
-            .json(mango_query_obj)
-            .send()
-            .await
-        {
-            Ok(response) => response,
-            Err(err) => return Err(NanoError::InvalidUrlOrPort(err)),
-        };
+        let response = self
+		.client
+		.post(&formated_url)
+		.json(mango_query_obj)
+		.send()
+		.await?;
         // check the status code if it's in range from 200-299
         let status = response.status().is_success();
         // parse the response body
-        let body = match response.json::<Value>().await {
-            Ok(body) => body,
-            Err(err) => return Err(err.into()),
-        };
+        let body = response.json::<Value>().await?;
         match status {
             true => {
                 let body: DBFindList = serde_json::from_value(body)?;

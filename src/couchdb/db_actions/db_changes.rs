@@ -51,25 +51,15 @@ pub async fn changes(
             "doc_ids": doc_ids.unwrap()
         });
         let formated_url = format!("{}/{}/_changes?filter=_doc_ids", db.url, db.db_name);
-
-        match db.client.post(&formated_url).json(&j).send().await {
-            Ok(response) => response,
-            Err(err) => return Err(NanoError::InvalidRequest(err)),
-        }
+        db.client.post(&formated_url).json(&j).send().await?
     } else {
         let formated_url = format!("{}/{}/_changes", db.url, db.db_name);
-        match db.client.get(&formated_url).send().await {
-            Ok(response) => response,
-            Err(err) => return Err(NanoError::InvalidRequest(err)),
-        }
+        db.client.get(&formated_url).send().await?
     };
     // check the status code if it's in range from 200-299
     let status = response.status().is_success();
     // parse the response body
-    let body = match response.json::<Value>().await {
-        Ok(body) => body,
-        Err(err) => return Err(NanoError::InvalidRequest(err)),
-    };
+    let body = response.json::<Value>().await?;
     match status {
         true => {
             let body: DBChanges = serde_json::from_value(body)?;

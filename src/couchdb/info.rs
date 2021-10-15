@@ -40,14 +40,6 @@ impl CouchDBInfo {
 }
 
 pub async fn info(db: &Nano) -> Result<CouchDBInfo, NanoError> {
-    let response = match db.client.get(&db.url).send().await {
-        Ok(response) => response,
-        Err(err) => return Err(NanoError::InvalidRequest(err)),
-    };
-
-    let body = match response.json::<CouchDBInfo>().await {
-        Ok(body) => body,
-        Err(err) => return Err(NanoError::InvalidRequest(err)),
-    };
-    Ok(body)
+    let response = db.client.get(&db.url).send().await?;
+    Ok(response.json::<CouchDBInfo>().await?)
 }

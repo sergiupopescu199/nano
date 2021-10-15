@@ -10,9 +10,7 @@ async fn main() -> Result<()> {
     // get couchdb informations
     let db_info = db.info().await?;
     println!("CouchDB info: {}", db_info.to_string_pretty()?);
-    // create a database
-    let create_db_res = db.create("bob").await?;
-    println!("{}", create_db_res.to_string_pretty()?);
+
     // use bob database in order to perform document actions
     let bob = db.use_db("bob");
     // create a document on bob

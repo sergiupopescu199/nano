@@ -245,23 +245,16 @@ pub async fn bulk(db: &DBInstanceInUse, docs: &Value) -> Result<Value, NanoError
 pub async fn find(db: &DBInstanceInUse, mango_query_obj: &Value) -> Result<DBFindList, NanoError> {
     let formated_url = format!("{}/{}/_find", db.url, db.db_name);
 
-    let response = match db
+    let response = db
         .client
         .post(&formated_url)
         .json(mango_query_obj)
         .send()
-        .await
-    {
-        Ok(response) => response,
-        Err(err) => return Err(NanoError::InvalidRequest(err)),
-    };
+        .await?;
     // check the status code if it's in range from 200-299
     let status = response.status().is_success();
     // parse the response body
-    let body = match response.json::<Value>().await {
-        Ok(body) => body,
-        Err(err) => return Err(NanoError::InvalidRequest(err)),
-    };
+    let body = response.json::<Value>().await?;
     match status {
         true => {
             let body: DBFindList = serde_json::from_value(body)?;

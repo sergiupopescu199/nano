@@ -53,32 +53,20 @@ pub struct Props {
 impl DBInfo {
     pub fn to_string_pretty(&self) -> Result<String, NanoError> {
         let u = serde_json::to_value(self.clone())?;
-        match serde_json::to_string_pretty(&u) {
-            Ok(val) => Ok(val),
-            Err(err) => Err(NanoError::InvalidJson(err)),
-        }
+        Ok(serde_json::to_string_pretty(&u)?)
     }
     pub fn to_string(&self) -> Result<String, NanoError> {
         let u = serde_json::to_value(self.clone())?;
-        match serde_json::to_string(&u) {
-            Ok(val) => Ok(val),
-            Err(err) => Err(NanoError::InvalidJson(err)),
-        }
+        Ok(serde_json::to_string(&u)?)
     }
 }
 impl CouchDBInfo {
     pub fn to_string_pretty(&self) -> Result<String, NanoError> {
         let u = serde_json::to_value(self.clone())?;
-        match serde_json::to_string_pretty(&u) {
-            Ok(val) => Ok(val),
-            Err(err) => Err(NanoError::InvalidJson(err)),
-        }
+        Ok(serde_json::to_string_pretty(&u)?)
     }
     pub fn to_string(&self) -> Result<String, NanoError> {
         let u = serde_json::to_value(self.clone())?;
-        match serde_json::to_string(&u) {
-            Ok(val) => Ok(val),
-            Err(err) => Err(NanoError::InvalidJson(err)),
-        }
+        Ok(serde_json::to_string(&u)?)
     }
 }
