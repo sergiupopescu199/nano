@@ -7,9 +7,6 @@
 	"service": "nano_dev",
 	"workspaceFolder": "/nano",
 	"shutdownAction": "stopCompose",
-	"forwardPorts": [
-		3001
-	],
 	"extensions": [
 		"matklad.rust-analyzer",
 		"eamodio.gitlens",
