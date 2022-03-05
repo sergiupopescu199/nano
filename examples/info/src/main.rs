@@ -11,7 +11,7 @@ async fn main() -> Result<()> {
     let db_info = db.info().await?;
     println!("CouchDB info: {}", db_info.to_string_pretty()?);
     // create a database
-    let create_db_res = db.create("bob").await?;
+    let create_db_res = db.create("bob", false).await?;
     println!("{}", create_db_res.to_string_pretty()?);
     // use bob database in order to perform document actions
     let bob = db.use_db("bob");

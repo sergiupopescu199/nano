@@ -94,8 +94,8 @@ impl DBInstanceInUse {
             }
         }
     }
-    pub async fn destroy(&self, id: &str, rev: &str) -> Result<DBDocSuccess, NanoError> {
-        let formated_url = format!("{}/{}/{}?rev={}", self.url, self.db_name, id, rev);
+    pub async fn destroy<A, B>(&self, id: A, rev: B) -> Result<DBDocSuccess, NanoError> where A: AsRef<str>, B: AsRef<str> {
+        let formated_url = format!("{}/{}/{}?rev={}", self.url, self.db_name, id.as_ref(), rev.as_ref());
 
         let response = self.client.delete(&formated_url).send().await?;
         // check the status code if it's in range from 200-299
@@ -115,14 +115,14 @@ impl DBInstanceInUse {
             }
         }
     }
-    pub async fn get(&self, id: &str, revs_info: bool) -> Result<Value, NanoError> {
+    pub async fn get<S>(&self, id: S, revs_info: bool) -> Result<Value, NanoError> where S: AsRef<str> {
         let formated_url = if revs_info {
             format!(
                 "{}/{}/{}?revs_info={}",
-                self.url, self.db_name, id, revs_info
+                self.url, self.db_name, id.as_ref(), revs_info
             )
         } else {
-            format!("{}/{}/{}", self.url, self.db_name, id)
+            format!("{}/{}/{}", self.url, self.db_name, id.as_ref())
         };
 
         let response = self.client.get(&formated_url).send().await?;

@@ -26,11 +26,18 @@ impl DBInstanceInUse {
     ) -> Result<DBDocSuccess, NanoError> {
         Ok(db_doc::insert(&self, doc_body, id, rev).await?)
     }
-    pub async fn destroy(&self, id: &str, rev: &str) -> Result<DBDocSuccess, NanoError> {
-        Ok(db_doc::destroy(&self, id, rev).await?)
+    pub async fn destroy<A, B>(&self, id: A, rev: B) -> Result<DBDocSuccess, NanoError>
+    where
+        A: AsRef<str>,
+        B: AsRef<str>,
+    {
+        Ok(db_doc::destroy(&self, id.as_ref(), rev.as_ref()).await?)
     }
-    pub async fn get(&self, id: &str, revs_info: bool) -> Result<Value, NanoError> {
-        Ok(db_doc::get(&self, id, revs_info).await?)
+    pub async fn get<S>(&self, id: S, revs_info: bool) -> Result<Value, NanoError>
+    where
+        S: AsRef<str>,
+    {
+        Ok(db_doc::get(&self, id.as_ref(), revs_info).await?)
     }
     pub async fn list(&self, revs_info: bool) -> Result<DBDocList, NanoError> {
         Ok(db_doc::list(&self, revs_info).await?)

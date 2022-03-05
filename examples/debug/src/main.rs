@@ -7,33 +7,66 @@ async fn main() -> Result<()> {
     // let db = Nano::new("http://dev:dev@localhost:5984");
     // couchdb instance url including username and password
     let db = Nano::new("http://dev:dev@nano_couchdb:5984");
-    // get couchdb informations
-    let db_info = db.info().await?;
-    println!("CouchDB info: {}", db_info.to_string_pretty()?);
-
     // use bob database in order to perform document actions
-    let bob = db.use_db("bob");
-    // create a document on bob
-    let doc_body = json!({
-        "name": "John Doe",
-        "age": 43,
-        "address": {
-            "street": "10 Downing Street",
-            "city": "London"
-        },
-        "phones": [
-            "+44 1234567",
-            "+44 2345678"
-        ]
+
+    let j = json!({
+        "conflicts": true,
+        "limit": 1
+        // "bella": "gente_json"
     });
-    let doc_created_res = bob.insert(&doc_body, Some("billy_doc"), None).await?;
-    println!("Doc created: {}", doc_created_res.to_string_pretty()?);
-    // delete a doc
-    // get the id and rev from previously created doc, in order to delete a doc we must provide the id and rev
-    let id_doc_to_destory = doc_created_res.id;
-    let rev_doc_to_destory = doc_created_res.rev;
-    // delete the previously created document
-    let doc_deleted_res = bob.destroy(&id_doc_to_destory, &rev_doc_to_destory).await?;
-    println!("Doc deleted: {}", doc_deleted_res.to_string_pretty()?);
+
+    let mut url = format!("{}/{}?", "we", "bell");
+
+    let keys = vec![
+        "conflicts",
+        "descending",
+        "end_key",
+        "endkey_docid",
+        "end_key_doc_id",
+        "include_docs",
+        "inclusive_end",
+        "key",
+        "keys",
+        "limit",
+        "skip",
+        "startkey",
+        "startkey_docid",
+        "start_key_doc_id",
+        "update_seq",
+    ];
+
+    // for i in keys {
+    //     if j[i].as_i64().is_some() {
+    //         url.push_str(&*format!("{}={}&", i, j[&i].as_i64().unwrap()));
+    //     }
+    //     if j[i].as_str().is_some() {
+    //         url.push_str(&*format!("{}={}&", i, j[i].as_str().unwrap()));
+    //     }
+    //     if j[i].as_bool().is_some() {
+    //         url.push_str(&*format!("{}={}&", i, j[i].as_bool().unwrap()));
+    //     }
+    // }
+
+    let h: Vec<_> = keys
+        .iter()
+        .enumerate()
+        .map(|(i, _)| {
+            if j[i].as_i64().is_some() {
+                println!("{}", i);
+                format!("{}={}&", i, j[i].as_i64().unwrap())
+            } else if j[i].as_str().is_some() {
+                format!("{}={}&", i, j[i].as_str().unwrap())
+            } else if j[i].as_bool().is_some() {
+                format!("{}={}&", i, j[i].as_bool().unwrap())
+            } else {
+                format!("nope")
+            }
+        })
+        .collect();
+    println!("{:?}", h);
+    url.truncate(url.len() - 1);
+
+    println!("{}", url);
+
     Ok(())
 }

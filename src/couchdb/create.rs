@@ -30,11 +30,19 @@ impl DBActionSuccess {
     }
 }
 
-pub async fn create(db: &Nano, db_name: &str) -> Result<DBActionSuccess, NanoError> {
+pub async fn create(
+    db: &Nano,
+    db_name: &str,
+    partitioned: bool,
+) -> Result<DBActionSuccess, NanoError> {
     // create url which couchdb will be contacted
-    let url = &*format!("{}/{}", db.url, db_name);
+    let formated_url = if partitioned {
+        format!("{}/{}?partitioned={}", db.url, db_name, partitioned)
+    } else {
+        format!("{}/{}", db.url, db_name)
+    };
     // make the request to couchdb
-    let response = db.client.put(url).send().await?;
+    let response = db.client.put(&formated_url).send().await?;
     // check the status code if it's in range from 200-299
     let status = response.status().is_success();
     let status_code = response.status().as_u16();
