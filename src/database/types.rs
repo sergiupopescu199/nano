@@ -150,6 +150,17 @@ pub struct FindResponse {
     pub bookmark: String,
     /// Execution warnings
     pub warning: String,
+    /// Execution stats
+    pub execution_stats: Option<ExecutionStats>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExecutionStats {
+    pub total_keys_examined: i64,
+    pub total_docs_examined: i64,
+    pub total_quorum_docs_examined: i64,
+    pub results_returned: i64,
+    pub execution_time_ms: f64,
 }
 
 /// Success creating/deleting a database response from CouchDB

@@ -46,13 +46,19 @@ pub trait Convert {
     }
 }
 
+impl Convert for CouchDBInfo {}
+
 pub trait ParseQueryParams: bevy_reflect::Struct {
     /// Parse Struct keys and values into a HTTP query string
     fn parse_params(&self) -> String {
         let mut params = "".to_string();
+        // iterate for every key of teh struct
         for (index, value) in self.iter_fields().enumerate() {
+            // get field name
             let field_name = self.name_at(index).unwrap();
+            // based on value get it's value
             let value_formatted = self.get_value(value);
+            // check value data and exluce if bool type is false and if string is empty
             if !value_formatted.eq("false") && !value_formatted.is_empty() {
                 params.push_str(&format!("{}={}&", field_name, value_formatted));
             }
@@ -116,8 +122,6 @@ pub struct Vendor {
     /// Vendor name and description
     pub name: String,
 }
-
-impl Convert for CouchDBInfo {}
 
 /// CouchDB node
 #[derive(Debug)]
