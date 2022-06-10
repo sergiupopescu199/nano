@@ -1,15 +1,15 @@
 use bevy_reflect::Reflect;
 #[cfg(feature = "color")]
 pub use colored_json;
-mod database;
-mod error;
-
-pub use crate::database::types::{DBInUse, DBOperationSuccess};
-use error::CouchDBError;
+pub mod database;
 pub use error::NanoError;
+mod error;
+use crate::database::types::{DBInUse, DBOperationSuccess};
+use error::CouchDBError;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+
 
 pub trait Convert {
     /// Convert to string and indent
@@ -59,7 +59,10 @@ pub trait ParseQueryParams: bevy_reflect::Struct {
             // based on value get it's value
             let value_formatted = self.get_value(value);
             // check value data and exluce if bool type is false and if string is empty
-            if !value_formatted.eq("false") && !value_formatted.is_empty() {
+            if !value_formatted.eq("false")
+                && !value_formatted.is_empty()
+                && !value_formatted.eq("0")
+            {
                 params.push_str(&format!("{}={}&", field_name, value_formatted));
             }
         }
@@ -69,6 +72,7 @@ pub trait ParseQueryParams: bevy_reflect::Struct {
     fn get_value(&self, value: &dyn Reflect) -> String {
         match value.type_name() {
             "bool" => value.downcast_ref::<bool>().unwrap().to_string(),
+            "i64" => value.downcast_ref::<i64>().unwrap().to_string(),
             "alloc::string::String" => value.downcast_ref::<String>().unwrap().to_owned(),
             _ => "".to_string(),
         }
