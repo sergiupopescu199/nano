@@ -2,8 +2,6 @@ use bevy_reflect::Reflect;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::NanoError;
-
 // Database response after document creation/deletion or update
 #[derive(Debug, Serialize, Deserialize)]
 pub struct DocResponse {
@@ -72,6 +70,8 @@ pub struct GetDocRequestParams {
     revs: bool,
     /// Includes detailed information for all known document revisions
     revs_info: bool,
+    /// Deleted documents
+    deleted: bool,
 }
 
 impl GetDocRequestParams {
@@ -139,6 +139,12 @@ impl GetDocRequestParams {
     /// Includes detailed information for all known document revisions
     pub fn revs_info(mut self, enable: bool) -> Self {
         self.revs_info = enable;
+        self
+    }
+
+    /// Get doc even if it has been deleted
+    pub fn deleted(mut self, enable: bool) -> Self {
+        self.deleted = enable;
         self
     }
 }
@@ -507,11 +513,5 @@ impl BulkDocQuery {
     {
         self.rev = Some(rev.into());
         self
-    }
-}
-
-macro_rules! docs_to_purge {
-    ($($element: ident: $ty: ty),*) => {
-        struct Foo { $($element: $ty),* }
     }
 }

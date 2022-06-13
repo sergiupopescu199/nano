@@ -10,7 +10,6 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
-
 pub trait Convert {
     /// Convert to string and indent
     fn to_string_pretty(&self) -> Result<String, NanoError>

@@ -12,7 +12,7 @@ use types::{
 
 use async_stream::try_stream;
 use futures_util::{Stream, StreamExt};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use uuid::Uuid;
 
@@ -779,6 +779,82 @@ impl DBInUse {
         match status {
             true => {
                 let body: BulkGetResponse = serde_json::from_value(body)?;
+                Ok(body)
+            }
+            false => {
+                let body: CouchDBError = serde_json::from_value(body)?;
+                Err(NanoError::Unauthorized(body, status_code))
+            }
+        }
+    }
+
+    /// Purge documents from database
+    ///
+    /// ## Example
+    /// ```
+    /// let nano = Nano::new("http://dev:dev@localhost:5984");
+    /// let my_db nano.create_and_connect_to_db("my_db", false).await;
+    ///
+    /// // doc ids to be purged
+    /// let doc_ids =vec![
+    ///        "9042619901bb873974b76d206102e907",
+    ///        "9042619901bb873974b76d20610319b6",
+    ///  ];
+    /// let purged_docs_res = my_db.purge_docs(doc_ids).await.unwrap();
+    /// ```
+    ///
+    /// More [info](https://docs.couchdb.org/en/stable/api/database/misc.html#post--db-_purge)
+    pub async fn purge_docs(&self, doc_ids: Vec<&str>) -> Result<Value, NanoError> {
+        #[derive(Deserialize)]
+        struct Rev {
+            rev: String,
+            #[allow(dead_code)]
+            status: String,
+        }
+
+        let mut docs_info = vec![];
+        // get doc info from db
+        for id in doc_ids.into_iter() {
+            docs_info.push((
+                id.clone(),
+                self.get_doc(
+                    id,
+                    Some(GetDocRequestParams::default().meta(true).deleted(true)),
+                )
+                .await?,
+            ));
+        }
+
+        let mut doc_revs = vec![];
+        // get doc revision
+        for (id, info) in docs_info.into_iter() {
+            let rev: Vec<Rev> = serde_json::from_value(info["_revs_info"].clone())?;
+            doc_revs.push((id, rev))
+        }
+
+        let mut json_obj = serde_json::json!({});
+        // create the body for documents do be purged
+        for (id, rev) in doc_revs {
+            json_obj[id] = rev.into_iter().map(|a| a.rev).collect()
+        }
+
+        let url = format!("{}/{}/_purge", self.url, self.db_name,);
+        // purge documents
+        let response = self
+            .client
+            .post(url.as_str())
+            .json(&json_obj)
+            .send()
+            .await?;
+        // check the status code if it's in range from 200-299
+        let status = response.status().is_success();
+        let status_code = response.status().as_u16();
+        // parse the response body
+        let body = response.json::<Value>().await?;
+
+        match status {
+            true => {
+                let body: Value = serde_json::from_value(body)?;
                 Ok(body)
             }
             false => {

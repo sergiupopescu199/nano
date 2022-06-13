@@ -577,7 +577,6 @@ dependencies = [
  "bevy_reflect",
  "colored_json",
  "futures-util",
- "proc-macro2",
  "reqwest",
  "serde",
  "serde_json",
