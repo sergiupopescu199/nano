@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use bevy_reflect::Reflect;
 #[cfg(feature = "color")]
 pub use colored_json;
@@ -79,7 +81,7 @@ pub trait ParseQueryParams: bevy_reflect::Struct {
 }
 
 /// List all databases present on CouchDB node
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CouchDBListDBs {
     /// List of all databases present on the CouchDB node
     pub db_list: Vec<String>,
@@ -104,7 +106,7 @@ pub struct CouchDBListDBs {
 ///         "version": "3.1.2"
 ///    }
 /// ```
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct CouchDBInfo {
     pub couchdb: String,
     /// CouchDB node version
@@ -120,14 +122,14 @@ pub struct CouchDBInfo {
 }
 
 /// Custom vendor description
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Vendor {
     /// Vendor name and description
     pub name: String,
 }
 
 /// CouchDB node
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Nano {
     /// # Example
     /// ```
@@ -143,12 +145,12 @@ impl Nano {
     /// ```
     /// let db = Nano::new("http://dev:dev@localhost:5984");
     /// ```
-    pub fn new<S>(url: S) -> Nano
+    pub fn new<'a, S>(url: S) -> Nano
     where
-        S: Into<String>,
+        S: Into<Cow<'a, str>>,
     {
         Nano {
-            url: url.into(),
+            url: url.into().to_string(),
             client: Client::new(),
         }
     }
@@ -220,24 +222,24 @@ impl Nano {
     /// let my_new_db_partittioned_res = nano.create_db("my_new_db_partitioned", true).await?;
     ///
     /// ```
-    pub async fn create_db<S>(
+    pub async fn create_db<'a, S>(
         &self,
         db_name: S,
         partitioned: bool,
     ) -> Result<DBOperationSuccess, NanoError>
     where
-        S: AsRef<str>,
+        S: Into<Cow<'a, str>>,
     {
         // create url which couchdb will be contacted
         let formated_url = if partitioned {
             format!(
                 "{}/{}?partitioned={}",
                 self.url,
-                db_name.as_ref(),
+                db_name.into(),
                 partitioned
             )
         } else {
-            format!("{}/{}", self.url, db_name.as_ref())
+            format!("{}/{}", self.url, db_name.into())
         };
         // make the request to couchdb
         let response = self.client.put(&formated_url).send().await?;
@@ -270,12 +272,12 @@ impl Nano {
     /// let delete_db_res = nano.delete_db("my_new_db").await?;
     ///
     /// ```
-    pub async fn delete_db<S>(&self, db_name: S) -> Result<DBOperationSuccess, NanoError>
+    pub async fn delete_db<'a, S>(&self, db_name: S) -> Result<DBOperationSuccess, NanoError>
     where
-        S: AsRef<str>,
+        S: Into<Cow<'a, str>>,
     {
         // create url which couchdb will be contacted
-        let url = format!("{}/{}", self.url, db_name.as_ref());
+        let url = format!("{}/{}", self.url, db_name.into());
         // make the request to couchdb
         let response = self.client.delete(url.as_str()).send().await?;
         // check the status code if it's in range from 200-299
@@ -306,13 +308,13 @@ impl Nano {
     /// // connect to the newly created db in order to create/delete & modify documents
     /// let my_new_db = nano.connect_to_db("my_new_db")
     /// ```
-    pub fn connect_to_db<S>(&self, db_name: S) -> DBInUse
+    pub fn connect_to_db<'a, S>(&self, db_name: S) -> DBInUse
     where
-        S: Into<String>,
+        S: Into<Cow<'a, str>>,
     {
         DBInUse {
             url: self.url.clone(),
-            db_name: db_name.into(),
+            db_name: db_name.into().to_string(),
             client: self.client.clone(),
         }
     }
@@ -322,21 +324,22 @@ impl Nano {
     /// // connect to a CouchDB node
     /// let nano = Nano::new("http://dev:dev@localhost:5984");
     /// // connect to the newly created db
-    /// let my_new_db = nano.create_and_connect_to_db("my_new_db")
+    /// let my_new_db = nano.create_and_connect_to_db("my_new_db").await;
     /// ```
-    pub async fn create_and_connect_to_db<S>(&self, db_name: S, partitioned: bool) -> DBInUse
+    pub async fn create_and_connect_to_db<'a, S>(&self, db_name: S, partitioned: bool) -> DBInUse
     where
-        S: AsRef<str>,
+        S: Into<Cow<'a, str>>,
     {
+        let db_name = db_name.into();
         match self.create_db(db_name.as_ref(), partitioned).await {
             Ok(_) => DBInUse {
                 url: self.url.clone(),
-                db_name: db_name.as_ref().to_string(),
+                db_name: db_name.to_string(),
                 client: self.client.clone(),
             },
             Err(_) => DBInUse {
                 url: self.url.clone(),
-                db_name: db_name.as_ref().to_string(),
+                db_name: db_name.to_string(),
                 client: self.client.clone(),
             },
         }

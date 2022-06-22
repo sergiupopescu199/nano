@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -76,8 +78,14 @@ impl IndexData {
     }
 
     /// Vector of field names following the sort syntax. Nested fields are also allowed, e.g. `person.name`.
-    pub fn fields(mut self, fields: Vec<&str>) -> Self {
-        self.fields = fields.iter().map(|s| s.to_string()).collect();
+    pub fn fields<'a, A>(mut self, fields: Vec<A>) -> Self
+    where
+        A: Into<Cow<'a, str>>,
+    {
+        self.fields = fields
+            .into_iter()
+            .map(|s| s.into().to_string())
+            .collect::<Vec<_>>();
         self
     }
 }
@@ -108,20 +116,20 @@ impl Index {
     ///
     /// Indexes can be grouped into design documents for efficiency. However, a change to one index in a design document will invalidate all
     /// other indexes in the same document (similar to views)
-    pub fn design_doc_index<A>(mut self, ddoc: A) -> Self
+    pub fn design_doc_index<'a, A>(mut self, ddoc: A) -> Self
     where
-        A: Into<String>,
+        A: Into<Cow<'a, str>>,
     {
-        self.ddoc = Some(ddoc.into());
+        self.ddoc = Some(ddoc.into().to_string());
         self
     }
 
     /// Name of the index. If no name is provided, a name will be generated automatically.
-    pub fn name<A>(mut self, index_name: A) -> Self
+    pub fn name<'a, A>(mut self, index_name: A) -> Self
     where
-        A: Into<String>,
+        A: Into<Cow<'a, str>>,
     {
-        self.name = Some(index_name.into());
+        self.name = Some(index_name.into().to_string());
         self
     }
 

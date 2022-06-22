@@ -1,4 +1,5 @@
 pub mod types;
+use std::borrow::Cow;
 use std::fmt::Debug;
 
 use crate::database::types::ChangesDoc;
@@ -69,17 +70,17 @@ impl DBInUse {
     /// // create a doc
     /// let doc = serde_json::json!({"hello":"world"});
     /// // create a doc without specifying it's id
-    /// let docs = my_db.create_or_update_doc(doc, None, None).await.unwrap();
+    /// let docs = my_db.create_or_update_doc(&doc, None, None).await.unwrap();
     /// // create a doc specifying a custom id
-    /// let docs = my_db.create_or_update_doc(doc, Some("my_id"), None).await.unwrap();
+    /// let docs = my_db.create_or_update_doc(&doc, Some("my_id"), None).await.unwrap();
     /// // update a doc using the revision of previously created doc
-    /// let docs = my_db.create_or_update_doc(doc, Some("my_id"), docs.rev).await.unwrap();
+    /// let docs = my_db.create_or_update_doc(&doc, Some("my_id"), docs.rev).await.unwrap();
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/document/common.html#put--db-docid)
     pub async fn create_or_update_doc<T>(
         &self,
-        doc_body: T,
+        doc_body: &T,
         id: Option<&str>,
         rev: Option<&str>,
     ) -> Result<DocResponse, NanoError>
@@ -98,12 +99,7 @@ impl DBInUse {
             ),
         };
 
-        let response = self
-            .client
-            .put(&formated_url)
-            .json(&doc_body)
-            .send()
-            .await?;
+        let response = self.client.put(&formated_url).json(doc_body).send().await?;
         // check the status code if it's in range from 200-299
         let status = response.status().is_success();
         let status_code = response.status().as_u16();
@@ -136,17 +132,17 @@ impl DBInUse {
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/document/common.html#delete--db-docid)
-    pub async fn delete_doc<A, B>(&self, id: A, rev: B) -> Result<DocResponse, NanoError>
+    pub async fn delete_doc<'a, A, B>(&self, id: A, rev: B) -> Result<DocResponse, NanoError>
     where
-        A: AsRef<str>,
-        B: AsRef<str>,
+        A: Into<Cow<'a, str>>,
+        B: Into<Cow<'a, str>>,
     {
         let formated_url = format!(
             "{}/{}/{}?rev={}",
             self.url,
             self.db_name,
-            id.as_ref(),
-            rev.as_ref()
+            id.into(),
+            rev.into()
         );
 
         let response = self.client.delete(&formated_url).send().await?;
@@ -181,25 +177,25 @@ impl DBInUse {
     ///                 //get all document revisions
     ///                 .revs(true)
     ///
-    /// let docs = my_db.get_doc("9042619901bb873974b76d206102c006",Some(params)).await.unwrap();
+    /// let docs = my_db.get_doc("9042619901bb873974b76d206102c006",Some(&params)).await.unwrap();
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/document/common.html#get--db-docid)
-    pub async fn get_doc<S>(
+    pub async fn get_doc<'a, S>(
         &self,
         id: S,
-        params: Option<GetDocRequestParams>,
+        params: Option<&GetDocRequestParams>,
     ) -> Result<Value, NanoError>
     where
-        S: AsRef<str>,
+        S: Into<Cow<'a, str>>,
     {
         let formated_url = format!(
             "{}/{}/{}?{}",
             self.url,
             self.db_name,
-            id.as_ref(),
+            id.into(),
             params
-                .unwrap_or(GetDocRequestParams::default())
+                .unwrap_or(&GetDocRequestParams::default())
                 .parse_params()
         );
 
@@ -236,19 +232,19 @@ impl DBInUse {
     ///                 // per request get 100 docs at the time
     ///                 .limit(100)
     ///
-    /// let docs = my_db.list_docs(Some(params)).await.unwrap();
+    /// let docs = my_db.list_docs(Some(&params)).await.unwrap();
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/database/bulk-api.html#)
     pub async fn list_docs(
         &self,
-        params: Option<GetDocsRequestParams>,
+        params: Option<&GetDocsRequestParams>,
     ) -> Result<GetMultipleDocs, NanoError> {
         let formated_url = format!("{}/{}/_all_docs", self.url, self.db_name);
         let response = match self
             .client
             .post(&formated_url)
-            .json(&params.unwrap_or(GetDocsRequestParams::default().include_docs(true)))
+            .json(&params.unwrap_or(&GetDocsRequestParams::default().include_docs(true)))
             .send()
             .await
         {
@@ -291,7 +287,7 @@ impl DBInUse {
     /// // having different types of docs in an array just use serde_json::Value
     /// let docs = vec1[serde_json::json!({"hello": "world"}), serde_json::json!({"hello":"world", "name":"John"})];
     ///
-    /// let bulk_res = my_db.bulk_docs(docs).await.unwrap();
+    /// let bulk_res = my_db.bulk_docs(&docs).await.unwrap();
     /// // access the vector from the struct
     /// println!("{:#?}", bulk_res.0);
     /// ```
@@ -309,19 +305,19 @@ impl DBInUse {
     /// // if we know that the document type is always the same we could use a Struct
     /// let docs = vec1[Counter{ num: 1 }, Counter{ num: 2 }, Counter{ num: 3 }];
     ///
-    /// let bulk_res = my_db.bulk_docs(docs).await.unwrap();
+    /// let bulk_res = my_db.bulk_docs(&docs).await.unwrap();
     /// // access the vector from the struct
     /// println!("{:#?}", bulk_res.0);
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/database/bulk-api.html#db-bulk-docs)
-    pub async fn bulk_docs<T>(&self, docs: BulkDocs<T>) -> Result<BulkDocsResponse, NanoError>
+    pub async fn bulk_docs<T>(&self, docs: &BulkDocs<T>) -> Result<BulkDocsResponse, NanoError>
     where
         T: Serialize + Debug,
     {
         let formated_url = format!("{}/{}/_bulk_docs", self.url, self.db_name);
         println!("{:#?}", docs);
-        let response = match self.client.post(&formated_url).json(&docs).send().await {
+        let response = match self.client.post(&formated_url).json(docs).send().await {
             Ok(response) => response,
             Err(err) => return Err(NanoError::InvalidRequest(err)),
         };
@@ -371,7 +367,7 @@ impl DBInUse {
     ///    "execution_stats": true
     /// })
     ///
-    /// let find_res = my_db.find(mango_query_obj).await.unwrap()
+    /// let find_res = my_db.find(&mango_query_obj).await.unwrap()
     ///
     /// ```
     /// ### Or using [MangoQuery](crate::database::types::MangoQuery) type
@@ -387,11 +383,11 @@ impl DBInUse {
     ///                         .skip(0)
     ///                         .execution_stats(true);
     ///
-    /// let find_res = my_db.find(mango_query_obj).await.unwrap()
+    /// let find_res = my_db.find(&mango_query_obj).await.unwrap()
     ///
     /// ```
     ///
-    pub async fn find<T>(&self, mango_query_obj: T) -> Result<FindResponse, NanoError>
+    pub async fn find<T>(&self, mango_query_obj: &T) -> Result<FindResponse, NanoError>
     where
         T: Serialize,
     {
@@ -400,7 +396,7 @@ impl DBInUse {
         let response = self
             .client
             .post(&formated_url)
-            .json(&mango_query_obj)
+            .json(mango_query_obj)
             .send()
             .await?;
         // check the status code if it's in range from 200-299
@@ -433,7 +429,7 @@ impl DBInUse {
     ///                .filter(nano::database::types::Filter::DocIds),
     ///                 // give a max limit of documents given in a response
     ///                 .limit(100);
-    /// let changes_by_doc_ids = my_db.changes_stream(Some(doc_ids), Some(changes_query_params)).await;
+    /// let changes_by_doc_ids = my_db.changes_stream(Some(&doc_ids), Some(&changes_query_params)).await;
     /// // we must use this macto for iteration
     /// future_utils::pin_mut!(changes_by_doc_ids);
     ///
@@ -443,12 +439,12 @@ impl DBInUse {
     /// ```
     pub async fn changes_stream<'a>(
         &'a self,
-        data: Option<ChangesQueryData<'a>>,
-        query_params: Option<ChangesQueryParamsStream>,
+        data: Option<&'a ChangesQueryData<'a>>,
+        query_params: Option<&'a ChangesQueryParamsStream>,
     ) -> impl Stream<Item = Result<ChangesResponse, NanoError>> + 'a {
         try_stream! {
         let query_params = query_params
-            .unwrap_or(ChangesQueryParamsStream::default())
+            .unwrap_or(&ChangesQueryParamsStream::default())
             .parse_params();
         let formated_url = format!("{}/{}/_changes?{}", self.url, self.db_name, query_params);
 
@@ -535,17 +531,17 @@ impl DBInUse {
     ///                .filter(nano::database::types::Filter::DocIds),
     ///                 // give a max limit of documents given in a response
     ///                 .limit(100);
-    /// let changes_by_doc_ids = my_db.changes(Some(doc_ids), Some(changes_query_params)).await.unwrap();
+    /// let changes_by_doc_ids = my_db.changes(Some(&doc_ids), Some(&changes_query_params)).await.unwrap();
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/database/changes.html)
     pub async fn changes<'a>(
         &self,
-        data: Option<ChangesQueryData<'a>>,
-        query_params: Option<ChangesQueryParams>,
+        data: Option<&'a ChangesQueryData<'a>>,
+        query_params: Option<&'a ChangesQueryParams>,
     ) -> Result<ChangesResponse, NanoError> {
         let query_params = query_params
-            .unwrap_or(ChangesQueryParams::default())
+            .unwrap_or(&ChangesQueryParams::default())
             .parse_params();
         let formated_url = format!("{}/{}/_changes?{}", self.url, self.db_name, query_params);
         println!("{}", formated_url);
@@ -562,7 +558,7 @@ impl DBInUse {
                 ChangesQueryData::Selector(selector) => {
                     self.client
                         .post(&formated_url)
-                        .json(&selector)
+                        .json(selector)
                         .send()
                         .await?
                 }
@@ -611,13 +607,13 @@ impl DBInUse {
     ///             .name("foo-index")
     ///             .index_type(IndexType::Json);
     ///
-    /// let index_res =  my_db.create_index(index).await.unwrap()
+    /// let index_res =  my_db.create_index(&index).await.unwrap()
     /// ```
     ///
     /// More info about [index](https://docs.couchdb.org/en/stable/api/database/find.html#db-index)
-    pub async fn create_index(&self, index: Index) -> Result<IndexResponse, NanoError> {
+    pub async fn create_index(&self, index: &Index) -> Result<IndexResponse, NanoError> {
         let formated_url = format!("{}/{}/_index", self.url, self.db_name);
-        let response = match self.client.post(&formated_url).json(&index).send().await {
+        let response = match self.client.post(&formated_url).json(index).send().await {
             Ok(response) => response,
             Err(err) => return Err(NanoError::InvalidRequest(err)),
         };
@@ -699,14 +695,14 @@ impl DBInUse {
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/database/find.html#delete--db-_index-designdoc-json-name)
-    pub async fn delete_index<A, B>(
+    pub async fn delete_index<'a, A, B>(
         &self,
         ddoc: A,
         index_name: B,
     ) -> Result<DBOperationSuccess, NanoError>
     where
-        A: Into<String>,
-        B: Into<String>,
+        A: Into<Cow<'a, str>>,
+        B: Into<Cow<'a, str>>,
     {
         let url = format!(
             "{}/{}/_index/{}/json/{}",
@@ -760,16 +756,16 @@ impl DBInUse {
     ///     BulkDocQuery::new("123"),
     ///     BulkDocQuery::new_with_rev("1234", "1-4a7e4ae49c4366eaed8edeaea8f784ad"),
     /// ]);
-    /// let bulk_res = my_db.bulk_get(data).await.unwrap()
+    /// let bulk_res = my_db.bulk_get(&data).await.unwrap()
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/database/bulk-api.html#db-bulk-get)
-    pub async fn bulk_get<T>(&self, docs: BulkData<T>) -> Result<BulkGetResponse, NanoError>
+    pub async fn bulk_get<T>(&self, docs: &BulkData<T>) -> Result<BulkGetResponse, NanoError>
     where
         T: Serialize,
     {
         let url = format!("{}/{}/_bulk_get", self.url, self.db_name,);
-        let response = self.client.post(url.as_str()).json(&docs).send().await?;
+        let response = self.client.post(url.as_str()).json(docs).send().await?;
         // check the status code if it's in range from 200-299
         let status = response.status().is_success();
         let status_code = response.status().as_u16();
@@ -819,7 +815,7 @@ impl DBInUse {
                 id.clone(),
                 self.get_doc(
                     id,
-                    Some(GetDocRequestParams::default().meta(true).deleted(true)),
+                    Some(&GetDocRequestParams::default().meta(true).deleted(true)),
                 )
                 .await?,
             ));

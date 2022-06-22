@@ -1,9 +1,11 @@
+use std::borrow::Cow;
+
 use bevy_reflect::Reflect;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 // Database response after document creation/deletion or update
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DocResponse {
     /// Operation status
     pub ok: bool,
@@ -13,7 +15,7 @@ pub struct DocResponse {
     pub rev: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetMultipleDocs {
     /// Number of documents in the database
     pub total_rows: i64,
@@ -24,7 +26,7 @@ pub struct GetMultipleDocs {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub update_seq: Option<String>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct FindResponse {
     /// Vector of documents matching the search. In each matching document, the fields specified in the fields part of the request body are listed, along with their values.
     pub docs: Vec<Value>,
@@ -38,7 +40,7 @@ pub struct FindResponse {
     pub execution_stats: Option<ExecutionStats>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ExecutionStats {
     pub total_keys_examined: i64,
     pub total_docs_examined: i64,
@@ -48,7 +50,7 @@ pub struct ExecutionStats {
 }
 
 /// Get document request params
-#[derive(Reflect, Default, Debug)]
+#[derive(Reflect, Default, Debug, Clone)]
 pub struct GetDocRequestParams {
     /// Includes attachments bodies in response
     attachments: bool,
@@ -122,11 +124,11 @@ impl GetDocRequestParams {
     }
 
     ///  Retrieves document of specified revision
-    pub fn rev<A>(mut self, rev: A) -> Self
+    pub fn rev<'a, A>(mut self, rev: A) -> Self
     where
-        A: Into<String>,
+        A: Into<Cow<'a, str>>,
     {
-        self.rev = rev.into();
+        self.rev = rev.into().to_string();
         self
     }
 
@@ -150,7 +152,7 @@ impl GetDocRequestParams {
 }
 
 /// Get documents request params
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct GetDocsRequestParams {
     /// Include the Base64-encoded content of attachments in the documents that are included if `include_docs` is `true`.
     ///
@@ -224,7 +226,7 @@ pub struct GetDocsRequestParams {
     update_seq: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct KeyValue {
     key: String,
 }
@@ -305,19 +307,19 @@ impl GetDocsRequestParams {
         self
     }
     /// Stop returning records when the specified key is reached
-    pub fn end_key<A>(mut self, key: A) -> Self
+    pub fn end_key<'a, A>(mut self, key: A) -> Self
     where
-        A: Into<String>,
+        A: Into<Cow<'a, str>>,
     {
-        self.end_key = Some(key.into());
+        self.end_key = Some(key.into().to_string());
         self
     }
     /// Stop returning records when the specified design document ID is reached.
-    pub fn end_key_doc_id<A>(mut self, doc_id: A) -> Self
+    pub fn end_key_doc_id<'a, A>(mut self, doc_id: A) -> Self
     where
-        A: Into<String>,
+        A: Into<Cow<'a, str>>,
     {
-        self.end_key_doc_id = Some(doc_id.into());
+        self.end_key_doc_id = Some(doc_id.into().to_string());
         self
     }
     /// Include the full content of the design documents in the return
@@ -362,7 +364,7 @@ impl GetDocsRequestParams {
 }
 
 /// Save Documents in bulk
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BulkDocs<T>
 where
     T: Serialize,
@@ -405,7 +407,7 @@ where
     }
 }
 /// Bulk saved documents
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BulkDocsRes {
     /// Operation status
     pub ok: Option<bool>,
@@ -420,25 +422,25 @@ pub struct BulkDocsRes {
 }
 
 /// Response of bulk saved documents
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BulkDocsResponse(pub Vec<BulkDocsRes>);
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BulkGetResponse {
     pub results: Vec<BulkGetObj>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BulkGetObj {
     pub id: String,
     pub docs: Vec<BulkResult>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BulkResult {
     pub ok: Option<Value>,
     pub error: Option<ErrorBulkResponse>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ErrorBulkResponse {
     pub id: String,
     pub rev: String,
@@ -446,7 +448,7 @@ pub struct ErrorBulkResponse {
     pub reason: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BulkData<T>
 where
     T: Serialize,
@@ -477,7 +479,7 @@ where
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct BulkDocQuery {
     id: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -485,33 +487,33 @@ pub struct BulkDocQuery {
 }
 
 impl BulkDocQuery {
-    pub fn new<A>(id: A) -> Self
+    pub fn new<'a, A>(id: A) -> Self
     where
-        A: Into<String>,
+        A: Into<Cow<'a, str>>,
     {
         Self {
-            id: id.into(),
+            id: id.into().to_string(),
             rev: None,
         }
     }
 
-    pub fn new_with_rev<A, B>(id: A, rev: B) -> Self
+    pub fn new_with_rev<'a, A, B>(id: A, rev: B) -> Self
     where
-        A: Into<String>,
-        B: Into<String>,
+        A: Into<Cow<'a, str>>,
+        B: Into<Cow<'a, str>>,
     {
         Self {
-            id: id.into(),
-            rev: Some(rev.into()),
+            id: id.into().to_string(),
+            rev: Some(rev.into().to_string()),
         }
     }
 
     /// add revision to the specified document
-    pub fn rev<A>(mut self, rev: A) -> Self
+    pub fn rev<'a, A>(mut self, rev: A) -> Self
     where
-        A: Into<String>,
+        A: Into<Cow<'a, str>>,
     {
-        self.rev = Some(rev.into());
+        self.rev = Some(rev.into().to_string());
         self
     }
 }

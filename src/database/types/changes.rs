@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use bevy_reflect::Reflect;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -13,7 +15,7 @@ use super::MangoQuery;
 /// a continuously connected `_changes` feed is a reasonable approach for generating a real-time log for most applications.
 ///
 /// The results returned by `_changes` are partially ordered. In other words, the order is not guaranteed to be preserved for multiple calls.
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChangesResponse {
     /// A vector of changes made to a database
     pub results: Option<Vec<ChangesDoc>>,
@@ -22,7 +24,7 @@ pub struct ChangesResponse {
     // Count of remaining items in the feed
     pub pending: Option<i64>,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct ChangesDoc {
     /// Update sequence
     pub seq: String,
@@ -36,13 +38,13 @@ pub struct ChangesDoc {
     pub doc: Option<Value>,
 }
 /// Document leaves with single field `rev`
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Changes {
     /// Revision of the document
     pub rev: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, Reflect)]
+#[derive(Debug, Serialize, Deserialize, Reflect, Clone)]
 pub struct ChangesQueryParamsStream {
     /// Includes conflicts information in response. Ignored if isn’t `true`
     conflicts: bool,
@@ -88,7 +90,7 @@ pub struct ChangesQueryParamsStream {
     /// computing the seq value across many shards (esp. in highly-sharded databases) is expensive in a heavily loaded CouchDB cluster.
     seq_interval: i64,
 }
-#[derive(Debug, Serialize, Deserialize, Reflect)]
+#[derive(Debug, Serialize, Deserialize, Reflect, Clone)]
 pub struct ChangesQueryParams {
     /// Includes conflicts information in response. Ignored if isn’t `true`
     conflicts: bool,
@@ -122,7 +124,7 @@ pub struct ChangesQueryParams {
 }
 
 /// Feed options
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Feed {
     /// Equal to a regualr Request/Response
     Normal,
@@ -149,7 +151,7 @@ impl Default for Feed {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Style {
     MainOnly,
     AllDocs,
@@ -170,7 +172,7 @@ impl Default for Style {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum Filter {
     /// `filter=_selector`
     ///
@@ -192,6 +194,7 @@ impl std::fmt::Display for Filter {
     }
 }
 
+#[derive(Debug, Clone)]
 pub enum ChangesQueryData<'a> {
     /// Selector json used to make a query, it can accept either `serde_json::json!()` or `MangoQuery` type
     ///
@@ -331,11 +334,11 @@ impl ChangesQueryParamsStream {
     }
 
     /// Allows to use view functions as filters. Documents counted as “passed” for view filter in case if map function emits at least one record for them.
-    pub fn view<A>(mut self, value: A) -> Self
+    pub fn view<'a, A>(mut self, value: A) -> Self
     where
-        A: Into<String>,
+        A: Into<Cow<'a, str>>,
     {
-        self.view = value.into();
+        self.view = value.into().to_string();
         self
     }
 
@@ -409,11 +412,11 @@ impl ChangesQueryParams {
     }
 
     /// Allows to use view functions as filters. Documents counted as “passed” for view filter in case if map function emits at least one record for them.
-    pub fn view<A>(mut self, value: A) -> Self
+    pub fn view<'a, A>(mut self, value: A) -> Self
     where
-        A: Into<String>,
+        A: Into<Cow<'a, str>>,
     {
-        self.view = value.into();
+        self.view = value.into().to_string();
         self
     }
 

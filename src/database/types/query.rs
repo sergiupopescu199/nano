@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -37,7 +39,7 @@ use serde_json::Value;
 ///             .fields(fields);
 ///
 /// ```
-#[derive(Debug, Serialize, Deserialize, Default)]
+#[derive(Debug, Serialize, Deserialize, Default, Clone)]
 pub struct MangoQuery {
     /// Selectors are expressed as a JSON object describing documents of interest. Within this structure, you can apply conditional logic using specially named fields.
     selector: Value,
@@ -223,8 +225,16 @@ impl MangoQuery {
     ///     "fields": ["Actor_name", "Movie_year", "_id", "_rev"]
     /// }
     /// ```
-    pub fn fields(mut self, values: Vec<&str>) -> Self {
-        self.fields = Some(values.iter().map(|s| s.to_string()).collect());
+    pub fn fields<'a, A>(mut self, values: Vec<A>) -> Self
+    where
+        A: Into<Cow<'a, str>>,
+    {
+        self.fields = Some(
+            values
+                .into_iter()
+                .map(|s| s.into().to_string())
+                .collect::<Vec<_>>(),
+        );
         self
     }
     /// Maximum number of results returned. Default is `25`
@@ -238,8 +248,16 @@ impl MangoQuery {
         self
     }
     /// Instruct a query to use a specific index.
-    pub fn use_index(mut self, index_to_use: Vec<String>) -> Self {
-        self.use_index = Some(index_to_use);
+    pub fn use_index<'a, A>(mut self, index_to_use: Vec<A>) -> Self
+    where
+        A: Into<Cow<'a, str>>,
+    {
+        self.use_index = Some(
+            index_to_use
+                .into_iter()
+                .map(|a| a.into().to_string())
+                .collect::<Vec<_>>(),
+        );
         self
     }
     /// Include conflicted documents if `true`. Intended use is to easily find conflicted documents, without an index or view. Default is `false`
@@ -260,8 +278,11 @@ impl MangoQuery {
     ///
     /// Every query returns an opaque string under the bookmark key that can then be passed back in a query to get the next page of results.
     ///  If any part of the selector query changes between requests, the results are undefined, Default `null`
-    pub fn bookmark(mut self, value: String) -> Self {
-        self.bookmark = Some(value);
+    pub fn bookmark<'a, A>(mut self, value: A) -> Self
+    where
+        A: Into<Cow<'a, str>>,
+    {
+        self.bookmark = Some(value.into().to_string());
         self
     }
     /// Whether to update the index prior to returning the result. Default is `true`.
@@ -281,7 +302,7 @@ impl MangoQuery {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 /// Sorting can accept an array of strings or json
 pub enum SortType {
     String(String),
