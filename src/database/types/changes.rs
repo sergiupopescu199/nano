@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::borrow::Borrow;
 
 use bevy_reflect::Reflect;
 use serde::{Deserialize, Serialize};
@@ -273,14 +273,20 @@ impl ChangesQueryParamsStream {
     }
 
     /// `normal` Specifies Normal Polling Mode. All past changes are returned immediately. Default.
-    pub fn feed(mut self, feed: Feed) -> Self {
-        self.feed = feed.to_string();
+    pub fn feed<T>(mut self, feed: T) -> Self
+    where
+        T: Borrow<Feed>,
+    {
+        self.feed = feed.borrow().to_string();
         self
     }
 
     /// Reference to a filter function from a design document that will filter whole stream emitting only filtered events.
-    pub fn filter(mut self, filter: Filter) -> Self {
-        self.filter = filter.to_string();
+    pub fn filter<T>(mut self, filter: T) -> Self
+    where
+        T: Borrow<Filter>,
+    {
+        self.filter = filter.borrow().to_string();
         self
     }
 
@@ -318,8 +324,11 @@ impl ChangesQueryParamsStream {
     /// Specifies how many revisions are returned in the changes array. The default, `main_only`, will only return the current “winning” revision;
     ///
     /// `all_docs` will return all leaf revisions (including conflicts and deleted former conflicts).
-    pub fn style(mut self, style: Style) -> Self {
-        self.style = style.to_string();
+    pub fn style<T>(mut self, style: T) -> Self
+    where
+        T: Borrow<Style>,
+    {
+        self.style = style.borrow().to_string();
         self
     }
 
@@ -334,11 +343,11 @@ impl ChangesQueryParamsStream {
     }
 
     /// Allows to use view functions as filters. Documents counted as “passed” for view filter in case if map function emits at least one record for them.
-    pub fn view<'a, A>(mut self, value: A) -> Self
+    pub fn view<A>(mut self, value: A) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
-        self.view = value.into().to_string();
+        self.view = value.into();
         self
     }
 
@@ -377,8 +386,11 @@ impl ChangesQueryParams {
     }
 
     /// Reference to a filter function from a design document that will filter whole stream emitting only filtered events.
-    pub fn filter(mut self, filter: Filter) -> Self {
-        self.filter = filter.to_string();
+    pub fn filter<T>(mut self, filter: T) -> Self
+    where
+        T: Borrow<Filter>,
+    {
+        self.filter = filter.borrow().to_string();
         self
     }
 
@@ -406,17 +418,20 @@ impl ChangesQueryParams {
     /// Specifies how many revisions are returned in the changes array. The default, `main_only`, will only return the current “winning” revision;
     ///
     /// `all_docs` will return all leaf revisions (including conflicts and deleted former conflicts).
-    pub fn style(mut self, style: Style) -> Self {
-        self.style = style.to_string();
+    pub fn style<T>(mut self, style: T) -> Self
+    where
+        T: Borrow<Style>,
+    {
+        self.style = style.borrow().to_string();
         self
     }
 
     /// Allows to use view functions as filters. Documents counted as “passed” for view filter in case if map function emits at least one record for them.
-    pub fn view<'a, A>(mut self, value: A) -> Self
+    pub fn view<A>(mut self, value: A) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
-        self.view = value.into().to_string();
+        self.view = value.into();
         self
     }
 

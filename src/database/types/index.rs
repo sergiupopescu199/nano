@@ -1,9 +1,9 @@
-use std::borrow::Cow;
+use std::borrow::Borrow;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Index {
     /// JSON object describing the index to create.
     index: IndexData,
@@ -27,7 +27,7 @@ pub struct Index {
     partitioned: Option<bool>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum IndexType {
     Text,
     Json,
@@ -48,7 +48,7 @@ impl std::fmt::Display for IndexType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IndexData {
     /// A selector to apply to documents at indexing time, creating a partial index.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -78,14 +78,14 @@ impl IndexData {
     }
 
     /// Vector of field names following the sort syntax. Nested fields are also allowed, e.g. `person.name`.
-    pub fn fields<'a, A>(mut self, fields: Vec<A>) -> Self
+    pub fn fields<A>(mut self, fields: Vec<A>) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
         self.fields = fields
             .into_iter()
-            .map(|s| s.into().to_string())
-            .collect::<Vec<_>>();
+            .map(|s| s.into())
+            .collect::<Vec<String>>();
         self
     }
 }
@@ -116,26 +116,29 @@ impl Index {
     ///
     /// Indexes can be grouped into design documents for efficiency. However, a change to one index in a design document will invalidate all
     /// other indexes in the same document (similar to views)
-    pub fn design_doc_index<'a, A>(mut self, ddoc: A) -> Self
+    pub fn design_doc_index<A>(mut self, ddoc: A) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
-        self.ddoc = Some(ddoc.into().to_string());
+        self.ddoc = Some(ddoc.into());
         self
     }
 
     /// Name of the index. If no name is provided, a name will be generated automatically.
-    pub fn name<'a, A>(mut self, index_name: A) -> Self
+    pub fn name<A>(mut self, index_name: A) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
-        self.name = Some(index_name.into().to_string());
+        self.name = Some(index_name.into());
         self
     }
 
     /// Can be `json` or `text`. Defaults to `json`.
-    pub fn index_type(mut self, index_type: IndexType) -> Self {
-        self.index_type = index_type.to_string();
+    pub fn index_type<T>(mut self, index_type: T) -> Self
+    where
+        T: Borrow<IndexType>,
+    {
+        self.index_type = index_type.borrow().to_string();
         self
     }
 
@@ -149,7 +152,7 @@ impl Index {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IndexResponse {
     /// Flag to show whether the index was created or one already exists. Can be `created` or `exists`.
     pub result: String,
@@ -159,7 +162,7 @@ pub struct IndexResponse {
     pub name: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct GetIndexResponse {
     /// Number of indexes
     pub total_rows: i64,
@@ -167,7 +170,7 @@ pub struct GetIndexResponse {
     pub indexes: Vec<IndexObj>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IndexObj {
     /// D of the design document the index belongs to
     pub ddoc: Option<String>,
@@ -179,7 +182,7 @@ pub struct IndexObj {
     /// Definition of the index, containing the indexed fields
     pub def: IndexFields,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IndexFields {
     /// indexed fields
     fields: Vec<Value>,

@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
@@ -45,7 +43,7 @@ pub struct MangoQuery {
     selector: Value,
     /// The `sort` field contains a list of field name and direction pairs, expressed as a basic array.
     #[serde(skip_serializing_if = "Option::is_none")]
-    sort: Option<Vec<SortType>>,
+    sort: Option<Vec<Value>>,
     /// JSON array specifying which fields of each object should be returned. If it is omitted, the entire object is returned
     #[serde(skip_serializing_if = "Option::is_none")]
     fields: Option<Vec<String>>,
@@ -205,7 +203,7 @@ impl MangoQuery {
     ///     "sort": [{"Actor_name": "asc"}, {"Movie_runtime": "asc"}]
     /// }
     /// ```
-    pub fn sort(mut self, values: Vec<SortType>) -> Self {
+    pub fn sort(mut self, values: Vec<Value>) -> Self {
         self.sort = Some(values);
         self
     }
@@ -225,15 +223,15 @@ impl MangoQuery {
     ///     "fields": ["Actor_name", "Movie_year", "_id", "_rev"]
     /// }
     /// ```
-    pub fn fields<'a, A>(mut self, values: Vec<A>) -> Self
+    pub fn fields<A>(mut self, values: Vec<A>) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
         self.fields = Some(
             values
                 .into_iter()
-                .map(|s| s.into().to_string())
-                .collect::<Vec<_>>(),
+                .map(|s| s.into())
+                .collect::<Vec<String>>(),
         );
         self
     }
@@ -248,15 +246,15 @@ impl MangoQuery {
         self
     }
     /// Instruct a query to use a specific index.
-    pub fn use_index<'a, A>(mut self, index_to_use: Vec<A>) -> Self
+    pub fn use_index<A>(mut self, index_to_use: Vec<A>) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
         self.use_index = Some(
             index_to_use
                 .into_iter()
-                .map(|a| a.into().to_string())
-                .collect::<Vec<_>>(),
+                .map(|a| a.into())
+                .collect::<Vec<String>>(),
         );
         self
     }
@@ -278,9 +276,9 @@ impl MangoQuery {
     ///
     /// Every query returns an opaque string under the bookmark key that can then be passed back in a query to get the next page of results.
     ///  If any part of the selector query changes between requests, the results are undefined, Default `null`
-    pub fn bookmark<'a, A>(mut self, value: A) -> Self
+    pub fn bookmark<A>(mut self, value: A) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
         self.bookmark = Some(value.into().to_string());
         self
@@ -299,18 +297,5 @@ impl MangoQuery {
     pub fn execution_stats(mut self, enable: bool) -> Self {
         self.execution_stats = Some(enable);
         self
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-/// Sorting can accept an array of strings or json
-pub enum SortType {
-    String(String),
-    Json(Value),
-}
-
-impl Default for SortType {
-    fn default() -> Self {
-        Self::String(String::default())
     }
 }

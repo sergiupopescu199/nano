@@ -1,5 +1,5 @@
 pub mod types;
-use std::borrow::Cow;
+use std::borrow::Borrow;
 use std::fmt::Debug;
 
 use crate::database::types::ChangesDoc;
@@ -80,12 +80,12 @@ impl DBInUse {
     /// More [info](https://docs.couchdb.org/en/stable/api/document/common.html#put--db-docid)
     pub async fn create_or_update_doc<T>(
         &self,
-        doc_body: &T,
+        doc_body: T,
         id: Option<&str>,
         rev: Option<&str>,
     ) -> Result<DocResponse, NanoError>
     where
-        T: Serialize,
+        T: Serialize + Borrow<T>,
     {
         let (id, rev) = (id, rev);
         let formated_url = match (id, rev) {
@@ -99,7 +99,12 @@ impl DBInUse {
             ),
         };
 
-        let response = self.client.put(&formated_url).json(doc_body).send().await?;
+        let response = self
+            .client
+            .put(&formated_url)
+            .json(doc_body.borrow())
+            .send()
+            .await?;
         // check the status code if it's in range from 200-299
         let status = response.status().is_success();
         let status_code = response.status().as_u16();
@@ -132,10 +137,10 @@ impl DBInUse {
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/document/common.html#delete--db-docid)
-    pub async fn delete_doc<'a, A, B>(&self, id: A, rev: B) -> Result<DocResponse, NanoError>
+    pub async fn delete_doc<A, B>(&self, id: A, rev: B) -> Result<DocResponse, NanoError>
     where
-        A: Into<Cow<'a, str>>,
-        B: Into<Cow<'a, str>>,
+        A: Into<String>,
+        B: Into<String>,
     {
         let formated_url = format!(
             "{}/{}/{}?rev={}",
@@ -184,10 +189,10 @@ impl DBInUse {
     pub async fn get_doc<'a, S>(
         &self,
         id: S,
-        params: Option<&GetDocRequestParams>,
+        params: Option<&'a GetDocRequestParams>,
     ) -> Result<Value, NanoError>
     where
-        S: Into<Cow<'a, str>>,
+        S: Into<String>,
     {
         let formated_url = format!(
             "{}/{}/{}?{}",
@@ -195,6 +200,7 @@ impl DBInUse {
             self.db_name,
             id.into(),
             params
+                .borrow()
                 .unwrap_or(&GetDocRequestParams::default())
                 .parse_params()
         );
@@ -236,15 +242,15 @@ impl DBInUse {
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/database/bulk-api.html#)
-    pub async fn list_docs(
+    pub async fn list_docs<'a, T>(
         &self,
-        params: Option<&GetDocsRequestParams>,
+        params: Option<&'a GetDocsRequestParams>,
     ) -> Result<GetMultipleDocs, NanoError> {
         let formated_url = format!("{}/{}/_all_docs", self.url, self.db_name);
         let response = match self
             .client
             .post(&formated_url)
-            .json(&params.unwrap_or(&GetDocsRequestParams::default().include_docs(true)))
+            .json(params.unwrap_or(&GetDocsRequestParams::default().include_docs(true)))
             .send()
             .await
         {
@@ -311,13 +317,19 @@ impl DBInUse {
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/database/bulk-api.html#db-bulk-docs)
-    pub async fn bulk_docs<T>(&self, docs: &BulkDocs<T>) -> Result<BulkDocsResponse, NanoError>
+    pub async fn bulk_docs<T, C>(&self, docs: C) -> Result<BulkDocsResponse, NanoError>
     where
         T: Serialize + Debug,
+        C: Borrow<BulkDocs<T>>,
     {
         let formated_url = format!("{}/{}/_bulk_docs", self.url, self.db_name);
-        println!("{:#?}", docs);
-        let response = match self.client.post(&formated_url).json(docs).send().await {
+        let response = match self
+            .client
+            .post(&formated_url)
+            .json(docs.borrow())
+            .send()
+            .await
+        {
             Ok(response) => response,
             Err(err) => return Err(NanoError::InvalidRequest(err)),
         };
@@ -387,16 +399,16 @@ impl DBInUse {
     ///
     /// ```
     ///
-    pub async fn find<T>(&self, mango_query_obj: &T) -> Result<FindResponse, NanoError>
+    pub async fn find<T>(&self, mango_query_obj: T) -> Result<FindResponse, NanoError>
     where
-        T: Serialize,
+        T: Serialize + Borrow<T>,
     {
         let formated_url = format!("{}/{}/_find", self.url, self.db_name);
 
         let response = self
             .client
             .post(&formated_url)
-            .json(mango_query_obj)
+            .json(mango_query_obj.borrow())
             .send()
             .await?;
         // check the status code if it's in range from 200-299
@@ -443,12 +455,12 @@ impl DBInUse {
         query_params: Option<&'a ChangesQueryParamsStream>,
     ) -> impl Stream<Item = Result<ChangesResponse, NanoError>> + 'a {
         try_stream! {
-        let query_params = query_params
+        let query_params = query_params.borrow()
             .unwrap_or(&ChangesQueryParamsStream::default())
             .parse_params();
         let formated_url = format!("{}/{}/_changes?{}", self.url, self.db_name, query_params);
 
-        let mut response = match data {
+        let mut response = match data.borrow() {
             Some(data) => match data {
                 ChangesQueryData::DocIds(doc_ids) => {
                     self.client
@@ -611,9 +623,18 @@ impl DBInUse {
     /// ```
     ///
     /// More info about [index](https://docs.couchdb.org/en/stable/api/database/find.html#db-index)
-    pub async fn create_index(&self, index: &Index) -> Result<IndexResponse, NanoError> {
+    pub async fn create_index<T>(&self, index: T) -> Result<IndexResponse, NanoError>
+    where
+        T: Borrow<Index>,
+    {
         let formated_url = format!("{}/{}/_index", self.url, self.db_name);
-        let response = match self.client.post(&formated_url).json(index).send().await {
+        let response = match self
+            .client
+            .post(&formated_url)
+            .json(index.borrow())
+            .send()
+            .await
+        {
             Ok(response) => response,
             Err(err) => return Err(NanoError::InvalidRequest(err)),
         };
@@ -701,8 +722,8 @@ impl DBInUse {
         index_name: B,
     ) -> Result<DBOperationSuccess, NanoError>
     where
-        A: Into<Cow<'a, str>>,
-        B: Into<Cow<'a, str>>,
+        A: Into<String>,
+        B: Into<String>,
     {
         let url = format!(
             "{}/{}/_index/{}/json/{}",
@@ -760,12 +781,18 @@ impl DBInUse {
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/database/bulk-api.html#db-bulk-get)
-    pub async fn bulk_get<T>(&self, docs: &BulkData<T>) -> Result<BulkGetResponse, NanoError>
+    pub async fn bulk_get<T, C>(&self, docs: C) -> Result<BulkGetResponse, NanoError>
     where
         T: Serialize,
+        C: Borrow<BulkData<T>>,
     {
         let url = format!("{}/{}/_bulk_get", self.url, self.db_name,);
-        let response = self.client.post(url.as_str()).json(docs).send().await?;
+        let response = self
+            .client
+            .post(url.as_str())
+            .json(docs.borrow())
+            .send()
+            .await?;
         // check the status code if it's in range from 200-299
         let status = response.status().is_success();
         let status_code = response.status().as_u16();

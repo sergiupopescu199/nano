@@ -1,5 +1,3 @@
-use std::borrow::Cow;
-
 use bevy_reflect::Reflect;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -35,7 +33,7 @@ pub struct FindResponse {
     /// If any part of the selector query changes between requests, the results are undefined. Optional, default: null
     pub bookmark: String,
     /// Execution warnings
-    pub warning: String,
+    pub warning: Option<String>,
     /// Execution stats
     pub execution_stats: Option<ExecutionStats>,
 }
@@ -124,9 +122,9 @@ impl GetDocRequestParams {
     }
 
     ///  Retrieves document of specified revision
-    pub fn rev<'a, A>(mut self, rev: A) -> Self
+    pub fn rev<A>(mut self, rev: A) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
         self.rev = rev.into().to_string();
         self
@@ -307,19 +305,19 @@ impl GetDocsRequestParams {
         self
     }
     /// Stop returning records when the specified key is reached
-    pub fn end_key<'a, A>(mut self, key: A) -> Self
+    pub fn end_key<A>(mut self, key: A) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
-        self.end_key = Some(key.into().to_string());
+        self.end_key = Some(key.into());
         self
     }
     /// Stop returning records when the specified design document ID is reached.
-    pub fn end_key_doc_id<'a, A>(mut self, doc_id: A) -> Self
+    pub fn end_key_doc_id<A>(mut self, doc_id: A) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
-        self.end_key_doc_id = Some(doc_id.into().to_string());
+        self.end_key_doc_id = Some(doc_id.into());
         self
     }
     /// Include the full content of the design documents in the return
@@ -487,33 +485,33 @@ pub struct BulkDocQuery {
 }
 
 impl BulkDocQuery {
-    pub fn new<'a, A>(id: A) -> Self
+    pub fn new<A>(id: A) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
         Self {
-            id: id.into().to_string(),
+            id: id.into(),
             rev: None,
         }
     }
 
-    pub fn new_with_rev<'a, A, B>(id: A, rev: B) -> Self
+    pub fn new_with_rev<A, B>(id: A, rev: B) -> Self
     where
-        A: Into<Cow<'a, str>>,
-        B: Into<Cow<'a, str>>,
+        A: Into<String>,
+        B: Into<String>,
     {
         Self {
-            id: id.into().to_string(),
-            rev: Some(rev.into().to_string()),
+            id: id.into(),
+            rev: Some(rev.into()),
         }
     }
 
     /// add revision to the specified document
-    pub fn rev<'a, A>(mut self, rev: A) -> Self
+    pub fn rev<A>(mut self, rev: A) -> Self
     where
-        A: Into<Cow<'a, str>>,
+        A: Into<String>,
     {
-        self.rev = Some(rev.into().to_string());
+        self.rev = Some(rev.into());
         self
     }
 }

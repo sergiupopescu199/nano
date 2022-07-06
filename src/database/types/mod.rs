@@ -23,7 +23,7 @@ impl ParseQueryParams for ChangesQueryParams {}
 impl ParseQueryParams for GetDocRequestParams {}
 
 /// DB information
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DBInfo {
     /// Database name
     pub db_name: String,
@@ -52,7 +52,7 @@ pub struct DBInfo {
 }
 
 /// Cluster information
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Cluster {
     /// Shards. The number of range partitions.
     pub q: i64,
@@ -65,7 +65,7 @@ pub struct Cluster {
 }
 
 /// Database Size
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Sizes {
     /// The size of the database file on disk in bytes.
     /// Views indexes are not included in the calculation.
@@ -75,7 +75,7 @@ pub struct Sizes {
     /// he size of live data inside the database, in bytes.
     pub active: i64,
 }
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Props {
     /// If present and true, this indicates that the database is partitioned.
     pub partitioned: Option<bool>,
@@ -84,6 +84,7 @@ pub struct Props {
 /// Connected Database
 ///
 /// After creating a database, when connecting to a database from now on this struct will be used to interact with it
+#[derive(Debug, Clone)]
 pub struct DBInUse {
     /// CouchDB node url
     pub url: String,
@@ -94,7 +95,7 @@ pub struct DBInUse {
 }
 
 /// Success creating/deleting a database response from CouchDB
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct DBOperationSuccess {
     /// Operation status
     pub ok: bool,
