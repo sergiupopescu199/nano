@@ -16,7 +16,7 @@ pub trait Convert {
     where
         Self: Serialize,
     {
-        let u = serde_json::to_value(&self)?;
+        let u = serde_json::to_value(self)?;
         Ok(serde_json::to_string_pretty(&u)?)
     }
     /// Convert to string
@@ -24,7 +24,7 @@ pub trait Convert {
     where
         Self: Serialize,
     {
-        let u = serde_json::to_value(&self)?;
+        let u = serde_json::to_value(self)?;
         Ok(serde_json::to_string(&u)?)
     }
     /// Convert to json value
@@ -32,7 +32,7 @@ pub trait Convert {
     where
         Self: Serialize,
     {
-        Ok(serde_json::to_value(&self)?)
+        Ok(serde_json::to_value(self)?)
     }
     /// Convert to string, indent and color it
     #[cfg(feature = "color")]
@@ -195,7 +195,10 @@ impl Nano {
             }
             false => {
                 let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
+                Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+                    status_code,
+                    ..body
+                }))
             }
         }
     }
@@ -254,7 +257,10 @@ impl Nano {
             }
             false => {
                 let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
+                Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+                    status_code,
+                    ..body
+                }))
             }
         }
     }
@@ -291,7 +297,10 @@ impl Nano {
             }
             false => {
                 let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
+                Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+                    status_code,
+                    ..body
+                }))
             }
         }
     }
@@ -332,12 +341,12 @@ impl Nano {
         match self.create_db(&db_name, partitioned).await {
             Ok(_) => DBInUse {
                 url: self.url.clone(),
-                db_name: db_name,
+                db_name,
                 client: self.client.clone(),
             },
             Err(_) => DBInUse {
                 url: self.url.clone(),
-                db_name: db_name,
+                db_name,
                 client: self.client.clone(),
             },
         }

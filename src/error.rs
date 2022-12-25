@@ -9,8 +9,8 @@ pub enum NanoError {
     #[error("{0}")]
     InvalidRequest(#[from] reqwest::Error),
     /// Specific CouchDB errors which include status code and it's meaning
-    #[error("Status Code: {1}, Meaning: {}, the reason is: {}",.0.error, .0.reason)]
-    Unauthorized(CouchDBError, u16),
+    #[error("Status Code: {}, Meaning: {}, the reason is: {}",.0.status_code, .0.error, .0.reason)]
+    GenericCouchdbErrorWithCode(CouchDBError),
     /// Serde json Errors when parsing
     #[error("Unable to parse json: {0}")]
     InvalidJson(#[from] serde_json::Error),
@@ -26,4 +26,7 @@ pub struct CouchDBError {
     pub error: String,
     /// Reason of the error in a more human redable way
     pub reason: String,
+    /// Response code
+    #[serde(default)]
+    pub status_code: u16,
 }

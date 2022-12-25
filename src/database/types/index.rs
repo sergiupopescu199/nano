@@ -48,22 +48,13 @@ impl std::fmt::Display for IndexType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
 pub struct IndexData {
     /// A selector to apply to documents at indexing time, creating a partial index.
     #[serde(skip_serializing_if = "Option::is_none")]
     partial_filter_selector: Option<Value>,
     /// Vector of field names following the sort syntax. Nested fields are also allowed, e.g. `person.name`.
     fields: Vec<String>,
-}
-
-impl Default for IndexData {
-    fn default() -> Self {
-        Self {
-            partial_filter_selector: Option::default(),
-            fields: vec![],
-        }
-    }
 }
 
 impl IndexData {
@@ -172,7 +163,7 @@ pub struct GetIndexResponse {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct IndexObj {
-    /// D of the design document the index belongs to
+    /// ID of the design document the index belongs to
     pub ddoc: Option<String>,
     /// Name of the index
     pub name: String,

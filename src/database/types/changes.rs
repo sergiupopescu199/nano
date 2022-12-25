@@ -90,7 +90,7 @@ pub struct ChangesQueryParamsStream {
     /// computing the seq value across many shards (esp. in highly-sharded databases) is expensive in a heavily loaded CouchDB cluster.
     seq_interval: i64,
 }
-#[derive(Debug, Serialize, Deserialize, Reflect, Clone)]
+#[derive(Debug, Serialize, Deserialize, Reflect, Clone, Default)]
 pub struct ChangesQueryParams {
     /// Includes conflicts information in response. Ignored if isn’t `true`
     conflicts: bool,
@@ -224,22 +224,6 @@ impl Default for ChangesQueryParamsStream {
             seq_interval: i64::default(),
             style: String::default(),
             timeout: i64::default(),
-            view: String::default(),
-        }
-    }
-}
-impl Default for ChangesQueryParams {
-    fn default() -> Self {
-        Self {
-            att_encoding_info: bool::default(),
-            attachments: bool::default(),
-            conflicts: bool::default(),
-            descending: bool::default(),
-            filter: String::default(),
-            include_docs: bool::default(),
-            limit: i64::default(),
-            seq_interval: i64::default(),
-            style: String::default(),
             view: String::default(),
         }
     }

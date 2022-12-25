@@ -5,6 +5,7 @@ use std::fmt::Debug;
 use crate::database::types::ChangesDoc;
 use crate::error::{CouchDBError, NanoError};
 use crate::ParseQueryParams;
+use serde::de::DeserializeOwned;
 use types::{
     BulkData, BulkDocs, BulkDocsResponse, BulkGetResponse, ChangesQueryData, ChangesQueryParams,
     ChangesQueryParamsStream, ChangesResponse, DBInUse, DBInfo, DBOperationSuccess, DocResponse,
@@ -39,17 +40,13 @@ impl DBInUse {
         let status_code = response.status().as_u16();
         // parse the response body
         let body = response.json::<Value>().await?;
-
-        match status {
-            true => {
-                let body: DBInfo = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => {
-                let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
-            }
+        if status {
+            return Ok(serde_json::from_value::<DBInfo>(body)?);
         }
+        Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+            status_code,
+            ..serde_json::from_value(body)?
+        }))
     }
     /// Creates/Updates a new named document or creates a new revision of the existing document in the specified database, using the supplied JSON document structure.
     ///
@@ -91,12 +88,9 @@ impl DBInUse {
         let formated_url = match (id, rev) {
             (Some(id), Some(rev)) => format!("{}/{}/{}?rev={}", self.url, self.db_name, id, rev),
             (Some(id), None) => format!("{}/{}/{}", self.url, self.db_name, id),
-            (None, None) | (None, Some(_)) => format!(
-                "{}/{}/{}",
-                self.url,
-                self.db_name,
-                Uuid::new_v4().to_string()
-            ),
+            (None, None) | (None, Some(_)) => {
+                format!("{}/{}/{}", self.url, self.db_name, Uuid::new_v4())
+            }
         };
 
         let response = self
@@ -111,16 +105,13 @@ impl DBInUse {
         // parse the response body
         let body = response.json::<Value>().await?;
 
-        match status {
-            true => {
-                let body: DocResponse = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => {
-                let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
-            }
+        if status {
+            return Ok(serde_json::from_value::<DocResponse>(body)?);
         }
+        Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+            status_code,
+            ..serde_json::from_value(body)?
+        }))
     }
 
     /// Marks the specified document as deleted by adding a field `_deleted` with the value true.
@@ -139,15 +130,15 @@ impl DBInUse {
     /// More [info](https://docs.couchdb.org/en/stable/api/document/common.html#delete--db-docid)
     pub async fn delete_doc<A, B>(&self, id: A, rev: B) -> Result<DocResponse, NanoError>
     where
-        A: Into<String>,
-        B: Into<String>,
+        A: AsRef<str>,
+        B: AsRef<str>,
     {
         let formated_url = format!(
             "{}/{}/{}?rev={}",
             self.url,
             self.db_name,
-            id.into(),
-            rev.into()
+            id.as_ref(),
+            rev.as_ref()
         );
 
         let response = self.client.delete(&formated_url).send().await?;
@@ -157,16 +148,13 @@ impl DBInUse {
         // parse the response body
         let body = response.json::<Value>().await?;
 
-        match status {
-            true => {
-                let body: DocResponse = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => {
-                let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
-            }
+        if status {
+            return Ok(serde_json::from_value::<DocResponse>(body)?);
         }
+        Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+            status_code,
+            ..serde_json::from_value(body)?
+        }))
     }
 
     /// Returns one document by the specified docid from the specified db.
@@ -186,19 +174,20 @@ impl DBInUse {
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/document/common.html#get--db-docid)
-    pub async fn get_doc<'a, S>(
+    pub async fn get_doc<'a, S, T>(
         &self,
         id: S,
         params: Option<&'a GetDocRequestParams>,
-    ) -> Result<Value, NanoError>
+    ) -> Result<T, NanoError>
     where
-        S: Into<String>,
+        S: AsRef<str>,
+        T: DeserializeOwned,
     {
         let formated_url = format!(
             "{}/{}/{}?{}",
             self.url,
             self.db_name,
-            id.into(),
+            id.as_ref(),
             params
                 .borrow()
                 .unwrap_or(&GetDocRequestParams::default())
@@ -211,17 +200,13 @@ impl DBInUse {
         let status_code = response.status().as_u16();
         // parse the response body
         let body = response.json::<Value>().await?;
-
-        match status {
-            true => {
-                let body: Value = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => {
-                let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
-            }
+        if status {
+            return Ok(serde_json::from_value::<T>(body)?);
         }
+        Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+            status_code,
+            ..serde_json::from_value(body)?
+        }))
     }
 
     /// List documents stored on database using `_all_docs` view.
@@ -266,16 +251,13 @@ impl DBInUse {
             Err(err) => return Err(NanoError::InvalidRequest(err)),
         };
 
-        match status {
-            true => {
-                let body: GetMultipleDocs = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => {
-                let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
-            }
+        if status {
+            return Ok(serde_json::from_value::<GetMultipleDocs>(body)?);
         }
+        Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+            status_code,
+            ..serde_json::from_value(body)?
+        }))
     }
 
     /// The bulk document API allows you to create and update multiple documents at the same time within a single request.
@@ -340,13 +322,10 @@ impl DBInUse {
             Ok(body) => body,
             Err(err) => return Err(NanoError::InvalidRequest(err)),
         };
-        match status {
-            true => {
-                let body: BulkDocsResponse = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => Err(NanoError::GenericCouchdbError(body)),
+        if status {
+            return Ok(serde_json::from_value::<BulkDocsResponse>(body)?);
         }
+        Err(NanoError::GenericCouchdbError(body))
     }
 
     /// Find documents using a declarative JSON querying syntax.
@@ -415,13 +394,11 @@ impl DBInUse {
         let status = response.status().is_success();
         // parse the response body
         let body = response.json::<Value>().await?;
-        match status {
-            true => {
-                let body: FindResponse = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => Err(NanoError::GenericCouchdbError(body)),
+
+        if status {
+            return Ok(serde_json::from_value::<FindResponse>(body)?);
         }
+        Err(NanoError::GenericCouchdbError(body))
     }
 
     /// Keeps a continuous connection receiving data from CouchDB, the default timeout is 60 sec, after which the connection will be
@@ -442,7 +419,7 @@ impl DBInUse {
     ///                 // give a max limit of documents given in a response
     ///                 .limit(100);
     /// let changes_by_doc_ids = my_db.changes_stream(Some(&doc_ids), Some(&changes_query_params)).await;
-    /// // we must use this macto for iteration
+    /// // we must use this macro for iteration
     /// future_utils::pin_mut!(changes_by_doc_ids);
     ///
     /// while let Some(value) = info.next().await {
@@ -495,20 +472,18 @@ impl DBInUse {
                 // if last_seq is present this means the connection is closed
                 if !body.contains("last_seq") {
                     for data in body.split_ascii_whitespace().into_iter() {
-                        let change: ChangesDoc = serde_json::from_str(data)?;
+                        let change = serde_json::from_str::<ChangesDoc>(data)?;
                         items.push(change)
                     }
-                    let result = ChangesResponse {
+                    // return data to the stream
+                    yield ChangesResponse {
                         last_seq: None,
                         pending: None,
                         results: Some(items),
                     };
-                    // return data to the stream
-                    yield result;
                 } else {
-                    let result: ChangesResponse = serde_json::from_str(&body).unwrap();
                     // return data to the stream
-                    yield result;
+                    yield serde_json::from_str::<ChangesResponse>(&body)?;
                 }
             }
             }
@@ -588,13 +563,11 @@ impl DBInUse {
         let status = response.status().is_success();
         // parse the response body
         let body = response.json::<Value>().await?;
-        match status {
-            true => {
-                let body: ChangesResponse = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => Err(NanoError::GenericCouchdbError(body)),
+
+        if status {
+            return Ok(serde_json::from_value::<ChangesResponse>(body)?);
         }
+        Err(NanoError::GenericCouchdbError(body))
     }
 
     /// JSON object describing the index to create.
@@ -647,16 +620,13 @@ impl DBInUse {
             Err(err) => return Err(NanoError::InvalidRequest(err)),
         };
 
-        match status {
-            true => {
-                let body: IndexResponse = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => {
-                let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
-            }
+        if status {
+            return Ok(serde_json::from_value::<IndexResponse>(body)?);
         }
+        Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+            status_code,
+            ..serde_json::from_value(body)?
+        }))
     }
 
     /// Get all indexes present in db
@@ -679,16 +649,13 @@ impl DBInUse {
         // parse the response body
         let body = response.json::<Value>().await?;
 
-        match status {
-            true => {
-                let body: GetIndexResponse = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => {
-                let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
-            }
+        if status {
+            return Ok(serde_json::from_value::<GetIndexResponse>(body)?);
         }
+        Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+            status_code,
+            ..serde_json::from_value(body)?
+        }))
     }
 
     /// Delete and index in the db
@@ -722,15 +689,15 @@ impl DBInUse {
         index_name: B,
     ) -> Result<DBOperationSuccess, NanoError>
     where
-        A: Into<String>,
-        B: Into<String>,
+        A: AsRef<str>,
+        B: AsRef<str>,
     {
         let url = format!(
             "{}/{}/_index/{}/json/{}",
             self.url,
             self.db_name,
-            ddoc.into(),
-            index_name.into()
+            ddoc.as_ref(),
+            index_name.as_ref()
         );
         let response = self.client.delete(url.as_str()).send().await?;
         // check the status code if it's in range from 200-299
@@ -739,16 +706,13 @@ impl DBInUse {
         // parse the response body
         let body = response.json::<Value>().await?;
 
-        match status {
-            true => {
-                let body: DBOperationSuccess = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => {
-                let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
-            }
+        if status {
+            return Ok(serde_json::from_value::<DBOperationSuccess>(body)?);
         }
+        Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+            status_code,
+            ..serde_json::from_value(body)?
+        }))
     }
 
     /// This method can be called to query several documents in bulk.
@@ -799,16 +763,13 @@ impl DBInUse {
         // parse the response body
         let body = response.json::<Value>().await?;
 
-        match status {
-            true => {
-                let body: BulkGetResponse = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => {
-                let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
-            }
+        if status {
+            return Ok(serde_json::from_value::<BulkGetResponse>(body)?);
         }
+        Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+            status_code,
+            ..serde_json::from_value(body)?
+        }))
     }
 
     /// Purge documents from database
@@ -827,7 +788,11 @@ impl DBInUse {
     /// ```
     ///
     /// More [info](https://docs.couchdb.org/en/stable/api/database/misc.html#post--db-_purge)
-    pub async fn purge_docs(&self, doc_ids: Vec<&str>) -> Result<Value, NanoError> {
+    pub async fn purge_docs<T, S>(&self, doc_ids: &[S]) -> Result<T, NanoError>
+    where
+        S: AsRef<str>,
+        T: DeserializeOwned,
+    {
         #[derive(Deserialize)]
         struct Rev {
             rev: String,
@@ -837,15 +802,14 @@ impl DBInUse {
 
         let mut docs_info = vec![];
         // get doc info from db
-        for id in doc_ids.into_iter() {
-            docs_info.push((
-                id.clone(),
-                self.get_doc(
-                    id,
+        for id in doc_ids {
+            let doc: Value = self
+                .get_doc(
+                    id.as_ref(),
                     Some(&GetDocRequestParams::default().meta(true).deleted(true)),
                 )
-                .await?,
-            ));
+                .await?;
+            docs_info.push((id, doc));
         }
 
         let mut doc_revs = vec![];
@@ -858,7 +822,7 @@ impl DBInUse {
         let mut json_obj = serde_json::json!({});
         // create the body for documents do be purged
         for (id, rev) in doc_revs {
-            json_obj[id] = rev.into_iter().map(|a| a.rev).collect()
+            json_obj[id.as_ref()] = rev.into_iter().map(|a| a.rev).collect()
         }
 
         let url = format!("{}/{}/_purge", self.url, self.db_name,);
@@ -875,15 +839,12 @@ impl DBInUse {
         // parse the response body
         let body = response.json::<Value>().await?;
 
-        match status {
-            true => {
-                let body: Value = serde_json::from_value(body)?;
-                Ok(body)
-            }
-            false => {
-                let body: CouchDBError = serde_json::from_value(body)?;
-                Err(NanoError::Unauthorized(body, status_code))
-            }
+        if status {
+            return Ok(serde_json::from_value::<T>(body)?);
         }
+        Err(NanoError::GenericCouchdbErrorWithCode(CouchDBError {
+            status_code,
+            ..serde_json::from_value(body)?
+        }))
     }
 }

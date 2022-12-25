@@ -126,7 +126,7 @@ impl GetDocRequestParams {
     where
         A: Into<String>,
     {
-        self.rev = rev.into().to_string();
+        self.rev = rev.into();
         self
     }
 

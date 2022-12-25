@@ -280,7 +280,7 @@ impl MangoQuery {
     where
         A: Into<String>,
     {
-        self.bookmark = Some(value.into().to_string());
+        self.bookmark = Some(value.into());
         self
     }
     /// Whether to update the index prior to returning the result. Default is `true`.
