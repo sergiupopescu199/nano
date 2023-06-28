@@ -5,7 +5,7 @@ pub mod database;
 pub use error::NanoError;
 mod error;
 use crate::database::types::{DBInUse, DBOperationSuccess};
-use error::CouchDBError;
+pub use error::CouchDBError;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};

@@ -723,8 +723,8 @@ impl DBInUse {
     /// let nano = Nano::new("http://dev:dev@localhost:5984");
     /// let my_db nano.create_and_connect_to_db("my_db", false).await;
     ///
-    /// // using serde_json::json!() method
-    /// let data = serde_json::json({
+    /// // using serde_json::json!() macro
+    /// let data = serde_json::json!({
     ///     docs: [
     ///         {
     ///             "id": "9042619901bb873974b76d206102e907"
